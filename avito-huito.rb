@@ -17,8 +17,8 @@ require 'slop'
 require 'dkim'
 
 @opts = Slop.parse do |o|
-  o.integer '-f', '--first', 'First page', default: 1
-  o.integer '-l', '--last', 'Last page', default: 50
+  o.integer '-f', '--first', 'First page'
+  o.integer '-l', '--last', 'Last page'
   o.integer '-a', '--min_price', 'Min price', default: 0
   o.integer '-b', '--max_price', 'Max price', default: 5000
   o.string '-s', '--storage', 'Storage path (storage.yml)', default: "storage.yml"
@@ -51,7 +51,6 @@ File.open(@opts[:exclude], "r") do |f|
 end
 
 @colors_to_destroy_eyes = [:light_black, :light_red, :light_green, :light_yellow, :light_blue, :light_magenta, :light_cyan, :light_white]
-#@html_page = "<meta charset='UTF-8'><link rel='stylesheet' type='text/css' href='avito-huito.css'>"
 
 def opn_pag(page_start, page_end)
   def debug(input_text)
@@ -69,6 +68,10 @@ def opn_pag(page_start, page_end)
 
   if File.exist?(@opts[:storage])
     avito_populate_old = YAML.load_file(@opts[:storage]).uniq
+    if page_start.nil? && (avito_populate_old.length > 0)
+      page_start = avito_populate_old[0][3]-1
+      page_end = avito_populate_old.last[3]+1 if page_end.nil?
+    end
   else
     avito_populate_old = []
   end
@@ -90,7 +93,6 @@ def opn_pag(page_start, page_end)
           end
         end
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
-        #@html_page += "<div class='avito_item'><img src='#{img}'><a href='#{pretty_print(url)}'>#{title}</a><p class='price'>#{price}</p></div>" if include_this
         avito_populate.push([url, price, title, i, img]) if include_this
       rescue
       end
@@ -98,9 +100,6 @@ def opn_pag(page_start, page_end)
   end
 
   File.open(@opts[:storage], 'w') { |file| file.write(avito_populate.uniq.to_yaml) }
-  #puts @html_page
-  #File.open("/tmp/avito-huito.html", 'w') { |file| file.write(@html_page) }
-  #File.open("/tmp/avito-huito.css", 'w') { |file| file.write(File.read("avito-huito.css")) }
 
   debug("Sold items:")
   @mail += "<h1>Sold items:</h1>"
