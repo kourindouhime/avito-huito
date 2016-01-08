@@ -36,7 +36,7 @@ require 'dkim'
   end
 end
 
-@mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
+@mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nMIME-Version: 1.0\nContent-type: text/html\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
 
 if (ARGV.length == 0) || (@opts.arguments.length == 0)
   abort(@opts.to_s)
