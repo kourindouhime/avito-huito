@@ -67,15 +67,18 @@ def opn_pag(page_start, page_end)
   end
 
   if File.exist?(@opts[:storage])
-    avito_populate_old = YAML.load_file(@opts[:storage]).uniq
-    if page_start.nil? && (avito_populate_old.length > 0)
-      page_start = avito_populate_old[0][3]-1
-      page_end = avito_populate_old.last[3]+1 if page_end.nil?
+    storage_array = YAML.load_file(@opts[:storage])
+    avito_populate_old = storage_array[0].uniq
+    if page_start.nil? && (storage_array.length > 1)
+      page_start = storage_array[1][0]-1
+      page_end = storage_array[1][1]+1 if page_end.nil?
     end
   else
     avito_populate_old = []
   end
   avito_populate = []
+
+  pages = []
 
   for i in page_start..page_end do
     page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=1&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
@@ -93,13 +96,17 @@ def opn_pag(page_start, page_end)
           end
         end
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
-        avito_populate.push([url, price, title, i, img]) if include_this
+        if include_this
+          avito_populate.push([url, price, title, img])
+          pages[0] = i if pages[0].nil?
+          pages[1] = i
+        end
       rescue
       end
     end
   end
 
-  File.open(@opts[:storage], 'w') { |file| file.write(avito_populate.uniq.to_yaml) }
+  File.open(@opts[:storage], 'w') { |file| file.write([avito_populate.uniq, pages].to_yaml) }
 
   debug("Sold items:")
   @mail += "<h1>Sold items:</h1>"
