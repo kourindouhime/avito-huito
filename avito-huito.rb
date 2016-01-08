@@ -64,7 +64,7 @@ def opn_pag(page_start, page_end)
 
   def add_to_output(good)
     debug(good[1].to_s + " " + pretty_print(good[0]))
-    @mail += "<p><b>#{good[1]}</b> <a href='https://www.avito.ru#{good[0]}'>#{good[2]}</a></p>"
+    @mail += "<p>#{good[3]} <b>#{good[1]}</b> <a href='https://www.avito.ru#{good[0]}'>#{good[2]}</a></p>"
   end
 
   if File.exist?(@opts[:storage])
@@ -91,7 +91,7 @@ def opn_pag(page_start, page_end)
         end
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
         #@html_page += "<div class='avito_item'><img src='#{img}'><a href='#{pretty_print(url)}'>#{title}</a><p class='price'>#{price}</p></div>" if include_this
-        avito_populate.push([url, price, title, img]) if include_this
+        avito_populate.push([url, price, title, i, img]) if include_this
       rescue
       end
     end
