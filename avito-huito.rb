@@ -2,6 +2,11 @@
 
 # encoding: utf-8
 
+# TODO: 
+#
+# 1. Delay between requests
+# 2. Smart page detector based on previous results (do not scan all empty pages, save only 1st and last pages in the future)
+
 require 'rubygems'
 require 'nokogiri'
 require 'open-uri'
@@ -112,7 +117,7 @@ def opn_pag(page_start, page_end)
   end
 
   if !@opts[:no_dkim]
-    @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read))
+    @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read), :domain => @opts[:from].split("@")[1])
   end
 
   if ((avito_populate_old-avito_populate).length > 0) || ((avito_populate-avito_populate_old).length > 0)
