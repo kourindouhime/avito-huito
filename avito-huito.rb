@@ -16,8 +16,8 @@ require 'dkim'
   o.integer '-l', '--last', 'Last page', default: 50
   o.integer '-a', '--min_price', 'Min price', default: 0
   o.integer '-b', '--max_price', 'Max price', default: 5000
-  o.string '-s', '--storage', 'Storage path (storage.yml)', default: "/tmp/avito-storage.yml"
-  o.string '-e', '--exclude', 'Exclude vocabulary path (exclude.txt)', default: "/tmp/avito-exclude.txt"
+  o.string '-s', '--storage', 'Storage path (storage.yml)', default: "storage.yml"
+  o.string '-e', '--exclude', 'Exclude vocabulary path (exclude.txt)', default: "exclude.txt"
   o.string '-c', '--category', 'Category URL string. E.g. "moskva/telefony/iphone"', default: "moskva/telefony/iphone"
   o.string '-d', '--dkim_selector', 'DKIM selector', default: "mail"
   o.string '-k', '--dkim_key', 'DKIM private key path', default: "private.pem"
@@ -25,14 +25,13 @@ require 'dkim'
   o.string '-F', '--from', 'From: avito@yourdomain.com', default: "avito@yoshi.tk"
   o.string '-S', '--subject', 'Email subject prefix', default: "Avito-Huito: "
   o.boolean '-D', '--no_dkim', 'Disable DKIM'
-  o.boolean '-v', '--verbose', 'Debug mode'
+  o.boolean '-v', '--verbose', 'Verbose mode'
   o.on '--version' do
     abort("Avito-Huito 0.1")
   end
 end
 
 @mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
-
 
 if (ARGV.length == 0) || (@opts.arguments.length == 0)
   abort(@opts.to_s)
@@ -113,7 +112,15 @@ def opn_pag(page_start, page_end)
   end
 
   if !@opts[:no_dkim]
-    Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read))
+    @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read))
+  end
+
+  if ((avito_populate_old-avito_populate).length > 0) || ((avito_populate-avito_populate_old).length > 0)
+    Net::SMTP.start('127.0.0.1') do |smtp|
+      smtp.send_message @mail, @opts[:from], @opts[:to]
+    end
+  else
+    debug("No updates")
   end
 end
 
