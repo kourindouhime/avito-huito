@@ -5,7 +5,7 @@
 # TODO: 
 #
 # 1. Delay between requests
-# 2. Smart page detector based on previous results (do not scan all empty pages, save only 1st and last pages in the future)
+# 2. All, user=1 or user=2
 
 require 'rubygems'
 require 'nokogiri'
@@ -29,6 +29,7 @@ require 'dkim'
   o.string '-t', '--to', 'To: email@example.com', default: "me@yoshi.tk"
   o.string '-F', '--from', 'From: avito@yourdomain.com', default: "avito@yoshi.tk"
   o.string '-S', '--subject', 'Email subject prefix', default: "Avito-Huito: "
+  o.integer '-u', '--user', '0 = All, 1 = Private, 2 = Companies', default: 0
   o.boolean '-D', '--no_dkim', 'Disable DKIM'
   o.boolean '-v', '--verbose', 'Verbose mode'
   o.on '--version' do
@@ -81,7 +82,7 @@ def opn_pag(page_start, page_end)
   pages = []
 
   for i in page_start..page_end do
-    page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=1&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
+    page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
     u = page.xpath('//article[@data-item-premium=0]')-page.css('.item-highlight')
     u.each do |s|
       begin
