@@ -22,7 +22,7 @@ require 'dkim'
   o.integer '-a', '--min_price', 'Min price', default: 0
   o.integer '-b', '--max_price', 'Max price', default: 5000
   o.string '-s', '--storage', 'Storage path (storage.yml)', default: "storage.yml"
-  o.string '-e', '--exclude', 'Exclude vocabulary path (exclude.txt)', default: "exclude.txt"
+  o.string '-e', '--exclude', 'Exclude vocabulary path (exclude.txt)'
   o.string '-c', '--category', 'Category URL string. E.g. "moskva/telefony/iphone"', default: "moskva/telefony/iphone"
   o.string '-d', '--dkim_selector', 'DKIM selector', default: "mail"
   o.string '-k', '--dkim_key', 'DKIM private key path', default: "private.pem"
@@ -45,9 +45,11 @@ end
 
 @exclude_words = []
 
-File.open(@opts[:exclude], "r") do |f|
-  f.each_line do |line|
-    @exclude_words.push(line.strip)
+if !@opts[:exclude].nil?
+  File.open(@opts[:exclude], "r") do |f|
+    f.each_line do |line|
+      @exclude_words.push(line.strip)
+    end
   end
 end
 
