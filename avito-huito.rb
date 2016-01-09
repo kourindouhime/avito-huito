@@ -84,10 +84,10 @@ def opn_pag(page_start, page_end)
   pages = []
 
   for i in page_start..page_end do
-    page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
-    u = page.xpath('//article[@data-item-premium=0]')-page.css('.item-highlight')
-    u.each do |s|
-      begin
+    begin
+      page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
+      u = page.xpath('//article[@data-item-premium=0]')-page.css('.item-highlight')
+      u.each do |s|
         include_this = true
         price = s.css("div.item-price")[0].content.gsub(/\p{Space}/,'').to_i
         url = s.css("a.item-link")[0].values[0]
@@ -104,8 +104,8 @@ def opn_pag(page_start, page_end)
           pages[0] = i if pages[0].nil?
           pages[1] = i
         end
-      rescue
       end
+    rescue
     end
   end
 
