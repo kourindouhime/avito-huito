@@ -5,7 +5,8 @@
 # TODO: 
 #
 # 1. Delay between requests
-# 2. All, user=1 or user=2
+# 2. Something is wrong with exclusions
+# 3. Notifier options (only sold, only new or both)
 
 require 'rubygems'
 require 'nokogiri'
@@ -85,7 +86,9 @@ def opn_pag(page_start, page_end)
 
   for i in page_start..page_end do
     begin
-      page = Nokogiri::HTML(open("https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}", {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
+      addr = "https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}"
+      puts "Querying: #{addr}" if @opts[:verbose]
+      page = Nokogiri::HTML(open(addr, {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
       u = page.xpath('//article[@data-item-premium=0]')-page.css('.item-highlight')
       u.each do |s|
         include_this = true
