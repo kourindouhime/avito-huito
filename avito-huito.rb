@@ -5,7 +5,6 @@
 # TODO: 
 #
 # 1. Delay between requests
-# 2. Something is wrong with exclusions
 # 3. Notifier options (only sold, only new or both)
 
 require 'rubygems'
@@ -18,45 +17,40 @@ require 'slop'
 require 'dkim'
 
 @opts = Slop.parse do |o|
-  o.integer '-f', '--first', 'First page'
-  o.integer '-l', '--last', 'Last page'
-  o.integer '-a', '--min_price', 'Min price', default: 0
-  o.integer '-b', '--max_price', 'Max price', default: 5000
+  o.integer '-f', '--first', 'First page (1)', default: 1
+  o.integer '-l', '--last', 'Last page (100)', default: 100
+  o.integer '-a', '--min_price', 'Min price (0)', default: 0
+  o.integer '-b', '--max_price', 'Max price (5000)', default: 5000
+  o.string '-e', '--exclude', 'Exclude "String" ("")', default: ""
   o.string '-s', '--storage', 'Storage path (storage.yml)', default: "storage.yml"
-  o.string '-e', '--exclude', 'Exclude vocabulary path (exclude.txt)'
-  o.string '-c', '--category', 'Category URL string. E.g. "moskva/telefony/iphone"', default: "moskva/telefony/iphone"
-  o.string '-d', '--dkim_selector', 'DKIM selector', default: "mail"
-  o.string '-k', '--dkim_key', 'DKIM private key path', default: "private.pem"
-  o.string '-t', '--to', 'To: email@example.com', default: "me@yoshi.tk"
-  o.string '-F', '--from', 'From: avito@yourdomain.com', default: "avito@yoshi.tk"
-  o.string '-S', '--subject', 'Email subject prefix', default: "Avito-Huito: "
-  o.integer '-u', '--user', '0 = All, 1 = Private, 2 = Companies', default: 0
-  o.boolean '-D', '--no_dkim', 'Disable DKIM'
-  o.boolean '-v', '--verbose', 'Verbose mode'
-  o.on '--version' do
-    abort("Avito-Huito 0.1")
+  o.string '-c', '--category', 'Category URL string ("moskva/telefony/iphone")', default: "moskva/telefony/iphone"
+  o.string '-d', '--dkim_selector', 'DKIM selector ("mail")', default: "mail"
+  o.string '-k', '--dkim_key', 'DKIM private key path ("private.pem")', default: "private.pem"
+  o.string '-t', '--to', 'To: email@example.com ("me@yoshi.tk")', default: "me@yoshi.tk"
+  o.string '-F', '--from', 'From: avito@yourdomain.com ("avito@yoshi.tk")', default: "avito@yoshi.tk"
+  o.string '-S', '--subject', 'Email subject prefix ("Avito-Huito: ")', default: "Avito-Huito: "
+  o.integer '-u', '--user', '0 = All, 1 = Private, 2 = Companies (0)', default: 0
+  o.boolean '-D', '--no_dkim', 'Disable DKIM (-)'
+  o.boolean '-v', '--verbose', 'Verbose mode (-)'
+  o.on '--version', 'Show current version (0.2)' do
+    abort("Avito-Huito 0.2")
   end
 end
 
+@exclude_words = ""
+@opts[:exclude].split(" ").each { |a| @exclude_words += " !#{a}" }
 @mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nMIME-Version: 1.0\nContent-type: text/html\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
 
 if (ARGV.length == 0) || (@opts.arguments.length == 0)
   abort(@opts.to_s)
 end
 
-@exclude_words = []
-
-if !@opts[:exclude].nil?
-  File.open(@opts[:exclude], "r") do |f|
-    f.each_line do |line|
-      @exclude_words.push(line.strip)
-    end
-  end
-end
-
 @colors_to_destroy_eyes = [:light_black, :light_red, :light_green, :light_yellow, :light_blue, :light_magenta, :light_cyan, :light_white]
 
-def opn_pag(page_start, page_end)
+def opn_pag
+  page_start = @opts[:first]
+  page_end = @opts[:last]
+
   def debug(input_text)
     puts input_text if @opts[:verbose]
   end
@@ -73,7 +67,7 @@ def opn_pag(page_start, page_end)
   if File.exist?(@opts[:storage])
     storage_array = YAML.load_file(@opts[:storage])
     avito_populate_old = storage_array[0].uniq
-    if page_start.nil? && (storage_array.length > 1)
+    if page_start.nil? && (storage_array.length > 1) && (storage_array[0].length > 0)
       page_start = storage_array[1][0]-1
       page_end = storage_array[1][1]+1 if page_end.nil?
     end
@@ -86,21 +80,17 @@ def opn_pag(page_start, page_end)
 
   for i in page_start..page_end do
     begin
-      addr = "https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{@opts.arguments[0].split(' ').join('+')}"
+      addr = "https://m.avito.ru/#{@opts[:category]}?bt=0&i=1&s=1&user=#{@opts[:user]}&p=#{i}&q=#{(@opts.arguments[0]+@exclude_words).split(' ').join('+')}"
       puts "Querying: #{addr}" if @opts[:verbose]
-      page = Nokogiri::HTML(open(addr, {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
+      page = Nokogiri::HTML(open(URI.escape(addr), {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}))
       u = page.xpath('//article[@data-item-premium=0]')-page.css('.item-highlight')
+      break if u.length == 0
       u.each do |s|
         include_this = true
         price = s.css("div.item-price")[0].content.gsub(/\p{Space}/,'').to_i
         url = s.css("a.item-link")[0].values[0]
         title = s.css("span.header-text")[0].content
         img = s.css("span.pseudo-img/@style").first.value.gsub(/.*url\(\/\//, "http://").gsub(/\).*/, "").gsub("140x105", "640x480")
-        @exclude_words.each do |word|
-          if url.include? word
-            include_this = false
-          end
-        end
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
         if include_this
           avito_populate.push([url, price, title, img])
@@ -141,4 +131,4 @@ def opn_pag(page_start, page_end)
   end
 end
 
-opn_pag(@opts[:first], @opts[:last])
+opn_pag
