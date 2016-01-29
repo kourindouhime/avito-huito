@@ -41,6 +41,8 @@ end
 @opts[:exclude].split(" ").each { |a| @exclude_words += " !#{a}" }
 @mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nMIME-Version: 1.0\nContent-type: text/html\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
 
+@mail_verbose = "<h2>Verbose data</h2>" if @opts[:verbose]
+
 if (ARGV.length == 0) || (@opts.arguments.length == 0)
   abort(@opts.to_s)
 end
@@ -62,6 +64,7 @@ def opn_pag
   def add_to_output(good)
     debug(good[1].to_s + " " + pretty_print(good[0]))
     @mail += "<p>#{good[3]} <b>#{good[1]}</b> <a href='https://www.avito.ru#{good[0]}'>#{good[2]}</a></p>"
+    @mail_verbose += good[4]
   end
 
   if File.exist?(@opts[:storage])
@@ -92,8 +95,9 @@ def opn_pag
         title = s.css("span.header-text")[0].content
         img = s.css("span.pseudo-img/@style").first.value.gsub(/.*url\(\/\//, "http://").gsub(/\).*/, "").gsub("140x105", "640x480")
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
+        layout = s
         if include_this
-          avito_populate.push([url, price, title, img])
+          avito_populate.push([url, price, title, img, layout])
           pages[0] = i if pages[0].nil?
           pages[1] = i
         end
@@ -117,6 +121,8 @@ def opn_pag
   (avito_populate-avito_populate_old).each do |k|
     add_to_output(k)
   end
+
+  @mail += @mail_verbose if @opts[:verbose]
 
   if !@opts[:no_dkim]
     @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read), :domain => @opts[:from].split("@")[1])
