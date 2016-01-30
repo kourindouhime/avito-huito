@@ -64,7 +64,7 @@ def opn_pag
   def add_to_output(good)
     debug(good[1].to_s + " " + pretty_print(good[0]))
     @mail += "<p>#{good[3]} <b>#{good[1]}</b> <a href='https://www.avito.ru#{good[0]}'>#{good[2]}</a></p>"
-    @mail_verbose.push(good[4]) if @opts[:verbose]
+    #@mail_verbose.push(good[4]) if @opts[:verbose]
   end
 
   if File.exist?(@opts[:storage])
@@ -95,7 +95,7 @@ def opn_pag
         title = s.css("span.header-text")[0].content
         img = s.css("span.pseudo-img/@style").first.value.gsub(/.*url\(\/\//, "http://").gsub(/\).*/, "").gsub("140x105", "640x480")
         include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
-        layout = s
+        layout = s.inner_html
         if include_this
           avito_populate.push([url, price, title, img, layout])
           pages[0] = i if pages[0].nil?
