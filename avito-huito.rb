@@ -41,7 +41,7 @@ end
 @opts[:exclude].split(" ").each { |a| @exclude_words += " !#{a}" }
 @mail = "To: #{@opts[:to]}\nFrom: #{@opts[:from]}\nMIME-Version: 1.0\nContent-type: text/html\nSubject: #{@opts[:subject]}#{@opts.arguments[0]}\n\n"
 
-@mail_verbose = "<h2>Verbose data</h2>" if @opts[:verbose]
+@mail_verbose = [] if @opts[:verbose]
 
 if (ARGV.length == 0) || (@opts.arguments.length == 0)
   abort(@opts.to_s)
@@ -64,7 +64,7 @@ def opn_pag
   def add_to_output(good)
     debug(good[1].to_s + " " + pretty_print(good[0]))
     @mail += "<p>#{good[3]} <b>#{good[1]}</b> <a href='https://www.avito.ru#{good[0]}'>#{good[2]}</a></p>"
-    @mail_verbose += good[4]
+    @mail_verbose.push(good[4]) if @opts[:verbose]
   end
 
   if File.exist?(@opts[:storage])
@@ -122,7 +122,7 @@ def opn_pag
     add_to_output(k)
   end
 
-  @mail += @mail_verbose if @opts[:verbose]
+  @mail += "<h2>Verbose info:</h2>" + @mail_verbose.inspect if @opts[:verbose]
 
   if !@opts[:no_dkim]
     @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read), :domain => @opts[:from].split("@")[1])
