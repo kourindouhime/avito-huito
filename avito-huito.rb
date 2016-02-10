@@ -4,8 +4,7 @@
 
 # TODO: 
 #
-# 1. Delay between requests
-# 3. Notifier options (only sold, only new or both)
+# ?. Delay between requests
 
 require 'rubygems'
 require 'nokogiri'
@@ -29,7 +28,9 @@ require 'dkim'
   o.string '-t', '--to', 'To: email@example.com ("me@yoshi.tk")', default: "me@yoshi.tk"
   o.string '-F', '--from', 'From: avito@yourdomain.com ("avito@yoshi.tk")', default: "avito@yoshi.tk"
   o.string '-S', '--subject', 'Email subject prefix ("Avito-Huito: ")', default: "Avito-Huito: "
+  o.string '-W', '--strict', 'Strict filter word. E.g. most important from request ("iphone")', default: "iphone"
   o.integer '-u', '--user', '0 = All, 1 = Private, 2 = Companies (0)', default: 0
+  #o.integer '-n', '--notify', '0 = All, 1 = Only new (0)', default: 0 # ???????????? remove this probably in the future
   o.boolean '-D', '--no_dkim', 'Disable DKIM (-)'
   o.boolean '-v', '--verbose', 'Verbose mode (-)'
   o.on '--version', 'Show current version (0.2)' do
@@ -94,7 +95,9 @@ def opn_pag
         url = s.css("a.item-link")[0].values[0]
         title = s.css("span.header-text")[0].content
         img = s.css("span.pseudo-img/@style").first.value.gsub(/.*url\(\/\//, "http://").gsub(/\).*/, "").gsub("140x105", "640x480")
-        include_this = false if (price > @opts[:max_price]) || (price < @opts[:min_price])
+        if (price > @opts[:max_price]) || (price < @opts[:min_price]) || (@opts[:strict] && !(url.include? @opts[:strict]))
+          include_this = false
+        end
         layout = s.inner_html
         if include_this
           avito_populate.push([url, price, title, img, layout])
@@ -128,7 +131,8 @@ def opn_pag
     @mail = Dkim.sign(@mail, :selector => @opts[:dkim_selector], :private_key => OpenSSL::PKey::RSA.new(open(@opts[:dkim_key]).read), :domain => @opts[:from].split("@")[1])
   end
 
-  if ((avito_populate_old-avito_populate).length > 0) || ((avito_populate-avito_populate_old).length > 0)
+  # ((avito_populate_old-avito_populate).length > 0) || (
+  if (avito_populate-avito_populate_old).length > 0)
     Net::SMTP.start('127.0.0.1') do |smtp|
       smtp.send_message @mail, @opts[:from], @opts[:to]
     end
