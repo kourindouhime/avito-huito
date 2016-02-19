@@ -4,6 +4,7 @@
 
 # TODO: 
 #
+# 1. Display as original layout
 # ?. Delay between requests
 
 require 'rubygems'
@@ -132,7 +133,7 @@ def opn_pag
   end
 
   # ((avito_populate_old-avito_populate).length > 0) || (
-  if (avito_populate-avito_populate_old).length > 0)
+  if (avito_populate-avito_populate_old).length > 0
     Net::SMTP.start('127.0.0.1') do |smtp|
       smtp.send_message @mail, @opts[:from], @opts[:to]
     end
